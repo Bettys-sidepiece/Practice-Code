@@ -70,7 +70,6 @@ std::string get_random_word(int len, std::string type)
 
 int main()
 {
-
     int sel = 0;
     settings_t settings;
     std::string word = get_random_word(settings.difficulty, settings.category[rand() % 5]);
