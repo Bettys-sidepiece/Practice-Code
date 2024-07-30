@@ -1,0 +1,25 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-g",
+                "${workspaceFolder}/C-Cpp/Hangman/Cpp/hangman.cpp",
+                "-I${workspaceFolder}/include/cpp-httplib-master",
+                "-I${workspaceFolder}/include/json-develop",
+                "-I${workspaceFolder}/C-Cpp/include",
+                "-o",
+                "${workspaceFolder}/C-Cpp/Hangman/Cpp/hangman.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Generated task by Debugger."
+        }
+    ]
+}
