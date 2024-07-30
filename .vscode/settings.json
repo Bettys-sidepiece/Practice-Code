@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "iostream": "cpp"
-    }
+        "iostream": "cpp",
+        "string": "cpp"
+    },
+    "cmake.ignoreCMakeListsMissing": true,
+    "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "clang-diagnostic-error"
+    ]
 }
