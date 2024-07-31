@@ -3,8 +3,9 @@
 #include <string>   // For string handling
 #include <map>      // For std::map, an associative container
 #include <vector>   // For std::vector, a dynamic array
-#include <chrono>   // For time-related functions, useful for delays or timing operations
-#include <thread>   // For std::this_thread::sleep_for, used with chrono for creating delays
+#include <random>
+#include <chrono> // For time-related functions, useful for delays or timing operations
+#include <thread> // For std::this_thread::sleep_for, used with chrono for creating delays
 
 // Windows - specific headers
 #include <winsock2.h>
@@ -48,11 +49,11 @@ typedef struct
 } settings_t;
 
 std::string get_random_word(int len, std::string type);
-void settings(settings_t set);
+void settings(settings_t &set);
 void print_menu(const std::vector<std::string> &options, int selectedOption, int type, settings_t set);
 void clear_screen();
 void print_hangman(int stage);
-void run_gameplay(settings_t set);
+void run_gameplay(const settings_t &set);
 void default_settings(settings_t &game);
 
 int main()
@@ -77,6 +78,10 @@ int main()
         std::cout << "\nWelcome to Hang-a-man!\n\n";
         print_menu(options, current, 0, setting);
         std::cout << "\nup- w key : down - s key : select - enter\n\n";
+
+        // Animate hangman
+        stage = (stage + 1) % 7;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
         if (_kbhit())
         {
@@ -108,10 +113,6 @@ int main()
                 return 0; // Exit the function
             }
         }
-
-        // Animate hangman
-        stage = (stage + 1) % 7;
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
 
@@ -119,11 +120,11 @@ void default_settings(settings_t &game)
 {
     game.difficulty = easy;
 
-    game.max_attempts = 6; // max is 6 in is 7
+    game.max_attempts = 7; // max is 7 in is 7
 
     game.enable_hints = 0; // 1 is enabled 0 is disabled
 
-    game.category = {"animal", "adjective", "noun"};
+    game.category = {"animal", "object", "plant", "car", "continent", "city", "country"};
 
     game.category_mode = 0;
 }
@@ -192,20 +193,13 @@ void print_menu(const std::vector<std::string> &options, int selectedOption, int
     }
 }
 
-void run_gameplay(settings_t set)
+void run_gameplay(const settings_t &set)
 {
-    std::string type = set.category[rand() % 2];
+    std::string type = set.category[rand() % set.category.size()];
     std::string word = get_random_word(set.difficulty, type);
-    std::string word_attempt;
-    word_attempt.resize(word.size());
-
-    for (int i = 0; i < set.difficulty; i++)
-    {
-        word_attempt[i] = '_';
-    }
+    std::string word_attempt(word.size(), '_');
 
     int tries = 0;
-    int index;
     char ch;
 
     if (word.empty())
@@ -216,67 +210,121 @@ void run_gameplay(settings_t set)
     while (tries < set.max_attempts && word_attempt != word)
     {
         clear_screen();
-        ch = getchar();
-        std::cout << "category" << ":" << type;
-        std::cout << "\t\tTries Left" << ":" << set.max_attempts - tries << "\n\n";
+        std::cout << "Category: " << type << "\n";
+        std::cout << "Tries Left: " << set.max_attempts - tries << "\n\n";
         print_hangman(tries);
+        std::cout << "Word Attempt: " << word_attempt << "\n";
 
+        ch = getchar();
         if (ch != '\0' && ch != '\n' && ch != ' ')
         {
-            if (word.find(ch) != std::string::npos)
+            bool found = false;
+            for (size_t i = 0; i < word.size(); ++i)
             {
-                word_attempt[word.find(ch)] = ch;
+                if (word[i] == ch)
+                {
+                    word_attempt[i] = ch;
+                    found = true;
+                }
             }
-            else
+            if (!found)
             {
-                std::cout << "Wrong Character enter!" << "\n";
+                std::cout << "Wrong Character entered!" << "\n";
                 tries++;
             }
-            getchar();
         }
-        std::cout << "Word Attempt" << ":" << word_attempt << "\n";
     }
 
     if (word_attempt == word)
     {
-        std::cout << "Congratulations! You guessed the word!" << std::endl;
+        std::cout << "Congratulations! You guessed the word!" << "\n";
     }
     else
     {
-        std::cout << "You ran out of tries!" << std::endl;
+        std::cout << "You ran out of tries!" << "\n";
     }
+
+    std::cout << "The word was: " << word << "\n";
+    std::cout << "Press any key to return to the menu...\n";
+    _getch();
 }
 
-void settings(settings_t set)
+void settings(settings_t &set)
 {
     int current = 0;
-
+    char ch;
     std::vector<std::string> options = {
         "Difficulty",
         "Attempts",
         "Hints"};
-    while (0)
+    while (true)
     {
-        std::cout << "Settings" << "\n\n";
+        clear_screen();
+        std::cout << "Settings\n\n";
         print_menu(options, current, 1, set);
+
+        ch = getchar();
+        switch (ch)
+        {
+        case 'w':
+            current = (current - 1 + options.size()) % options.size();
+            break;
+        case 's':
+            current = (current + 1) % options.size();
+            break;
+        case '\r':
+            if (current == 0)
+            {
+                set.difficulty = static_cast<game_mode_t>((set.difficulty + 1) % 16);
+            }
+            else if (current == 1)
+            {
+                set.max_attempts = (set.max_attempts % 10) + 1;
+            }
+            else if (current == 2)
+            {
+                set.enable_hints = (set.enable_hints + 1) % 2;
+            }
+            break;
+        case 'q':
+            return;
+        }
     }
 }
 
 std::string get_random_word(int len, std::string type)
 {
-    std::string word_type = "/=" + type + "?length=" + std::to_string(len);
-    httplib::Client cli("https://random-word-form.herokuapp.com/random");
+    std::string word_type = "/words?topics=" + type + "&max=20";
+    httplib::Client cli("https://api.datamuse.com");
 
-    auto result = cli.Get(word_type.c_str());
+    auto res = cli.Get(word_type.c_str());
 
-    // if successful
-    if (result && result->status == 200)
+    if (res && res->status == 200)
     {
-        nlohmann::json response = nlohmann::json::parse(result->body);
-        if (!response.empty() && response.is_array())
+        nlohmann::json jsonResponse = nlohmann::json::parse(res->body);
+        std::vector<std::string> matchingWords;
+
+        for (const auto &wordObj : jsonResponse)
         {
-            return response[0];
+            std::string word = wordObj["word"];
+            if (len == 0 || word.length() == static_cast<size_t>(len))
+            {
+                matchingWords.push_back(word);
+            }
+        }
+
+        if (!matchingWords.empty())
+        {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<> dis(0, matchingWords.size() - 1);
+            return matchingWords[dis(gen)];
         }
     }
+    else
+    {
+        std::cerr << "HTTP error: " << (res ? res->status : 0) << std::endl;
+    }
+
     return "";
 }
